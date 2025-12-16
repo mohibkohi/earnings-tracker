@@ -16,18 +16,22 @@ variable "bucket_name" {
   description = "Name of the S3 bucket (must be globally unique)"
 }
 
-# S3 Bucket
+variable "source_email" {
+  type        = string
+  description = "Verified SES email address to send notifications from"
+  default     = "mohibkohi@gmail.com" # Placeholder, user needs to verify or override
+}
+
+# --- Existing S3 Bucket ---
 resource "aws_s3_bucket" "website" {
   bucket = var.bucket_name
 }
 
 resource "aws_s3_bucket_website_configuration" "website" {
   bucket = aws_s3_bucket.website.id
-
   index_document {
     suffix = "index.html"
   }
-
   error_document {
     key = "index.html"
   }
@@ -35,7 +39,6 @@ resource "aws_s3_bucket_website_configuration" "website" {
 
 resource "aws_s3_bucket_public_access_block" "website" {
   bucket = aws_s3_bucket.website.id
-
   block_public_acls       = false
   block_public_policy     = false
   ignore_public_acls      = false
@@ -56,9 +59,195 @@ resource "aws_s3_bucket_policy" "website" {
       },
     ]
   })
-    depends_on = [aws_s3_bucket_public_access_block.website]
+  depends_on = [aws_s3_bucket_public_access_block.website]
 }
 
+# --- DynamoDB Table ---
+resource "aws_dynamodb_table" "subscriptions" {
+  name           = "EarningsSubscriptions"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "email"
+  range_key      = "ticker"
+
+  attribute {
+    name = "email"
+    type = "S"
+  }
+
+  attribute {
+    name = "ticker"
+    type = "S"
+  }
+}
+
+# --- IAM Role for Lambdas ---
+resource "aws_iam_role" "lambda_role" {
+  name = "earnings_lambda_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# IAM Policy for DynamoDB & Logs & SES
+resource "aws_iam_role_policy" "lambda_policy" {
+  name = "earnings_lambda_policy"
+  role = aws_iam_role.lambda_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "dynamodb:PutItem",
+          "dynamodb:GetItem",
+          "dynamodb:UpdateItem",
+          "dynamodb:Scan",
+          "dynamodb:Query"
+        ]
+        Resource = aws_dynamodb_table.subscriptions.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ses:SendEmail",
+          "ses:SendRawEmail"
+        ]
+        Resource = "*" 
+      }
+    ]
+  })
+}
+
+# --- Lambda: Subscribe ---
+data "archive_file" "subscribe_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/subscribe"
+  output_path = "${path.module}/dist/subscribe.zip"
+}
+
+resource "aws_lambda_function" "subscribe" {
+  filename         = data.archive_file.subscribe_zip.output_path
+  function_name    = "EarningsSubscribe"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.subscribe_zip.output_base64sha256
+
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.subscriptions.name
+    }
+  }
+}
+
+# --- Lambda: Processor ---
+data "archive_file" "processor_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/processor"
+  output_path = "${path.module}/dist/processor.zip"
+}
+
+resource "aws_lambda_function" "processor" {
+  filename         = data.archive_file.processor_zip.output_path
+  function_name    = "EarningsProcessor"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.processor_zip.output_base64sha256
+  timeout          = 60 # Give it a minute
+
+  environment {
+    variables = {
+      TABLE_NAME   = aws_dynamodb_table.subscriptions.name
+      SOURCE_EMAIL = var.source_email
+    }
+  }
+}
+
+# --- API Gateway (HTTP API) ---
+resource "aws_apigatewayv2_api" "earnings_api" {
+  name          = "EarningsAPI"
+  protocol_type = "HTTP"
+  cors_configuration {
+    allow_origins = ["*"]
+    allow_methods = ["POST", "OPTIONS"]
+    allow_headers = ["content-type"]
+  }
+}
+
+resource "aws_apigatewayv2_stage" "prod" {
+  api_id = aws_apigatewayv2_api.earnings_api.id
+  name   = "$default"
+  auto_deploy = true
+}
+
+resource "aws_apigatewayv2_integration" "subscribe_integration" {
+  api_id           = aws_apigatewayv2_api.earnings_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.subscribe.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "subscribe_route" {
+  api_id    = aws_apigatewayv2_api.earnings_api.id
+  route_key = "POST /subscribe"
+  target    = "integrations/${aws_apigatewayv2_integration.subscribe_integration.id}"
+}
+
+# Permission for API Gateway to invoke Lambda
+resource "aws_lambda_permission" "api_gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.subscribe.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/subscribe"
+}
+
+# --- EventBridge Scheduler (Daily) ---
+resource "aws_cloudwatch_event_rule" "daily_earnings_check" {
+  name                = "daily-earnings-check"
+  description         = "Triggers Earnings Processor daily"
+  schedule_expression = "cron(0 12 * * ? *)" # Run at 12:00 UTC (Early morning US)
+}
+
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule      = aws_cloudwatch_event_rule.daily_earnings_check.name
+  target_id = "EarningsProcessor"
+  arn       = aws_lambda_function.processor.arn
+}
+
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowExecutionFromEventBridge"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.processor.function_name
+  principal     = "events.amazonaws.com"
+  source_arn    = aws_cloudwatch_event_rule.daily_earnings_check.arn
+}
+
+# --- Outputs ---
 output "website_endpoint" {
   value = aws_s3_bucket_website_configuration.website.website_endpoint
+}
+
+output "api_endpoint" {
+  value = aws_apigatewayv2_api.earnings_api.api_endpoint
 }

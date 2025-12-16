@@ -1,0 +1,127 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal {
+    background: #1e1e1e;
+    padding: 2rem;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    position: relative;
+    border: 1px solid #333;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    color: #e0e0e0;
+}
+
+.closeBtn {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 1.5rem;
+    cursor: pointer;
+}
+
+.closeBtn:hover {
+    color: #fff;
+}
+
+.title {
+    margin-top: 0;
+    color: #fff;
+    font-size: 1.25rem;
+}
+
+.subtitle {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 1.5rem;
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.field label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #ccc;
+}
+
+.input, .select {
+    padding: 0.75rem;
+    border-radius: 6px;
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.input:focus, .select:focus {
+    outline: none;
+    border-color: #646cff;
+}
+
+.info {
+    font-size: 0.85rem;
+    color: #646cff;
+    margin: 0;
+}
+
+.error {
+    color: #ff6b6b;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.successMessage {
+    background: #2ea04322;
+    color: #2ea043;
+    padding: 1rem;
+    border-radius: 6px;
+    text-align: center;
+    border: 1px solid #2ea04355;
+}
+
+.submitBtn {
+    padding: 0.75rem;
+    background: #646cff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 0.5rem;
+}
+
+.submitBtn:hover {
+    background: #535bf2;
+}
+
+.submitBtn:disabled {
+    background: #444;
+    cursor: not-allowed;
+    color: #888;
+}

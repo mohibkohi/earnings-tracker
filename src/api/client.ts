@@ -122,3 +122,37 @@ export const getCompanyEarnings = async (symbol: string): Promise<EarningsData[]
         throw error;
     }
 };
+
+export interface SubscriptionRequest {
+    email: string;
+    ticker: string;
+    companyName: string;
+    earningsDate: string; // YYYY-MM-DD
+    notifyWhen: 'DAY_BEFORE' | 'DAY_OF';
+}
+
+export const subscribeToEarnings = async (request: SubscriptionRequest): Promise<boolean> => {
+    // Ideally this comes from env var, but for now we put a placeholder or expect the user to set it
+    const API_ENDPOINT = import.meta.env.VITE_SUBSCRIBE_API_URL || 'https://placeholder-api-id.execute-api.us-east-1.amazonaws.com';
+
+    try {
+        const response = await fetch(`${API_ENDPOINT}/subscribe`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(request)
+        });
+
+        if (!response.ok) {
+            const err = await response.text();
+            console.error('Subscription failed', err);
+            return false;
+        }
+
+        return true;
+    } catch (error) {
+        console.error('Subscription error:', error);
+        return false;
+    }
+};
