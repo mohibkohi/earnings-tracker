@@ -1,4 +1,4 @@
-import type { Company, EarningsData } from './mockData';
+import { EARNINGS_HISTORY, type Company, type EarningsData } from './mockData';
 
 const API_KEY = import.meta.env.VITE_API_KEY;
 const BASE_URL = 'https://www.alphavantage.co/query';
@@ -52,7 +52,24 @@ export const searchCompanies = async (query: string): Promise<Company[]> => {
     }
 };
 
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
+
 export const getCompanyEarnings = async (symbol: string): Promise<EarningsData[]> => {
+    // Check Cache
+    const cacheKey = `earnings_${symbol.toUpperCase()}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+        try {
+            const { timestamp, data } = JSON.parse(cached);
+            if (Date.now() - timestamp < CACHE_DURATION) {
+                console.log(`Using cached earnings for ${symbol}`);
+                return data;
+            }
+        } catch (e) {
+            localStorage.removeItem(cacheKey);
+        }
+    }
+
     try {
         const response = await fetch(`${BASE_URL}?function=EARNINGS&symbol=${symbol}&apikey=${API_KEY}`);
         const data = await response.json();
@@ -66,7 +83,7 @@ export const getCompanyEarnings = async (symbol: string): Promise<EarningsData[]
 
         if (!earnings.quarterlyEarnings) return [];
 
-        return earnings.quarterlyEarnings.map(q => {
+        const formattedEarnings = earnings.quarterlyEarnings.map(q => {
             const date = new Date(q.fiscalDateEnding);
             const quarter = Math.floor((date.getMonth() + 3) / 3);
 
@@ -80,8 +97,28 @@ export const getCompanyEarnings = async (symbol: string): Promise<EarningsData[]
                 revenue: '-'
             };
         });
+
+        // Save to Cache
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                timestamp: Date.now(),
+                data: formattedEarnings
+            }));
+        } catch (e) {
+            console.warn('Failed to save to local storage', e);
+        }
+
+        return formattedEarnings;
     } catch (error) {
         console.error('Earnings error:', error);
-        return [];
+
+        // Fallback to Mock Data
+        const mockData = EARNINGS_HISTORY.filter(e => e.symbol === symbol);
+        if (mockData.length > 0) {
+            console.log(`Falling back to mock data for ${symbol}`);
+            return mockData;
+        }
+
+        throw error;
     }
 };

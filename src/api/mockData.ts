@@ -33,12 +33,12 @@ export const EARNINGS_HISTORY: EarningsData[] = [
   { symbol: 'MSFT', quarter: 'Q4', year: 2023, reportDate: '2023-07-25', epsEstimated: 2.55, epsActual: 2.69, revenue: '56.2B' },
   { symbol: 'MSFT', quarter: 'Q3', year: 2023, reportDate: '2023-04-25', epsEstimated: 2.23, epsActual: 2.45, revenue: '52.9B' },
   { symbol: 'MSFT', quarter: 'Q2', year: 2023, reportDate: '2023-01-24', epsEstimated: 2.30, epsActual: 2.32, revenue: '52.7B' },
-  
+
   // Apple
   { symbol: 'AAPL', quarter: 'Q4', year: 2023, reportDate: '2023-11-02', epsEstimated: 1.39, epsActual: 1.46, revenue: '89.5B' },
   { symbol: 'AAPL', quarter: 'Q3', year: 2023, reportDate: '2023-08-03', epsEstimated: 1.19, epsActual: 1.26, revenue: '81.8B' },
   { symbol: 'AAPL', quarter: 'Q2', year: 2023, reportDate: '2023-05-04', epsEstimated: 1.43, epsActual: 1.52, revenue: '94.8B' },
-  
+
   // Google
   { symbol: 'GOOGL', quarter: 'Q3', year: 2023, reportDate: '2023-10-24', epsEstimated: 1.45, epsActual: 1.55, revenue: '76.69B' },
   { symbol: 'GOOGL', quarter: 'Q2', year: 2023, reportDate: '2023-07-25', epsEstimated: 1.34, epsActual: 1.44, revenue: '74.6B' },
@@ -46,4 +46,12 @@ export const EARNINGS_HISTORY: EarningsData[] = [
   // Tesla
   { symbol: 'TSLA', quarter: 'Q3', year: 2023, reportDate: '2023-10-18', epsEstimated: 0.73, epsActual: 0.66, revenue: '23.35B' },
   { symbol: 'TSLA', quarter: 'Q2', year: 2023, reportDate: '2023-07-19', epsEstimated: 0.82, epsActual: 0.91, revenue: '24.93B' },
+];
+
+export const UPCOMING_EARNINGS = [
+  { symbol: 'NVDA', name: 'NVIDIA Corp', reportDate: '2025-02-21', estimate: '5.15' },
+  { symbol: 'CRM', name: 'Salesforce', reportDate: '2025-02-28', estimate: '2.26' },
+  { symbol: 'AVGO', name: 'Broadcom', reportDate: '2025-03-07', estimate: '10.30' },
+  { symbol: 'ADBE', name: 'Adobe', reportDate: '2025-03-15', estimate: '4.38' },
+  { symbol: 'ORCL', name: 'Oracle', reportDate: '2025-03-10', estimate: '1.38' },
 ];

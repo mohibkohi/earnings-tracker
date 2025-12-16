@@ -1,4 +1,5 @@
 import { SearchBar } from '../components/SearchBar';
+import { UpcomingEarnings } from '../components/UpcomingEarnings';
 import styles from './Home.module.css';
 
 export function Home() {
@@ -14,6 +15,7 @@ export function Home() {
                 <div className={styles.searchWrapper}>
                     <SearchBar />
                 </div>
+                <UpcomingEarnings />
             </div>
         </div>
     );
