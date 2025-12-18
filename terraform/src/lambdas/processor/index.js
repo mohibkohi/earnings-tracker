@@ -88,6 +88,7 @@ Earnings Tracker Team
         Destination: {
             ToAddresses: [sub.email],
         },
+        ReplyToAddresses: [SOURCE_EMAIL],
         Message: {
             Subject: {
                 Data: subject,
@@ -96,6 +97,18 @@ Earnings Tracker Team
                 Text: {
                     Data: bodyText,
                 },
+                Html: {
+                    Data: `
+                        <div style="font-family: sans-serif; line-height: 1.5; color: #333; text-align: left;">
+                            <h2>Earnings Reminder</h2>
+                            <p>Hello,</p>
+                            <p>This is a reminder that <strong>${sub.companyName} (${sub.ticker})</strong> is scheduled to report earnings on <strong>${sub.earningsDate}</strong>.</p>
+                            <p>You requested this notification for: <em>${sub.notifyWhen === 'DAY_OF' ? 'Day of Earnings' : 'Day Before Earnings'}</em>.</p>
+                            <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                            <p style="font-size: 0.8em; color: #888;">This is a one-time notification for this event. To manage your subscriptions, visit Earnings Tracker.</p>
+                        </div>
+                    `
+                }
             },
         },
     };

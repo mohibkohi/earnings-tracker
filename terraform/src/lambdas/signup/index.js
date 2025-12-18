@@ -76,11 +76,22 @@ exports.handler = async (event) => {
             const emailParams = {
                 Source: SOURCE_EMAIL,
                 Destination: { ToAddresses: [email] },
+                ReplyToAddresses: [SOURCE_EMAIL],
                 Message: {
                     Subject: { Data: "Welcome to Earnings Tracker!" },
                     Body: {
-                        Text: { Data: `Hi there!\n\nWelcome to Earnings Tracker. You can now subscribe to earnings notifications for your favorite stocks.\n\nBest,\nEarnings Tracker Team` },
-                        Html: { Data: `<h1>Welcome to Earnings Tracker!</h1><p>You can now subscribe to earnings notifications for your favorite stocks.</p>` },
+                        Text: { Data: `Hi there!\n\nWelcome to Earnings Tracker. You can now subscribe to earnings notifications for your favorite stocks.\n\nTo get started, simply log in and search for a company you'd like to follow.\n\nBest,\nEarnings Tracker Team` },
+                        Html: {
+                            Data: `
+                            <div style="font-family: sans-serif; line-height: 1.5; color: #333; text-align: left;">
+                                <h1>Welcome to Earnings Tracker!</h1>
+                                <p>Hi there!</p>
+                                <p>You can now subscribe to earnings notifications for your favorite stocks.</p>
+                                <p>To get started, simply log in and search for a company you'd like to follow.</p>
+                                <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                                <p style="font-size: 0.8em; color: #888;">You received this because you created an account on Earnings Tracker.</p>
+                            </div>
+                        ` },
                     },
                 },
             };

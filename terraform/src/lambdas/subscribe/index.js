@@ -96,10 +96,24 @@ exports.handler = async (event) => {
         const emailParams = {
           Source: SOURCE_EMAIL,
           Destination: { ToAddresses: [email] },
+          ReplyToAddresses: [SOURCE_EMAIL],
           Message: {
-            Subject: { Data: `Subscribed to ${companyName} (${ticker}) Earnings` },
+            Subject: { Data: `Earnings Notification Confirmed: ${companyName} (${ticker})` },
             Body: {
-              Text: { Data: `You will be notified ${notifyWhen === 'DAY_BEFORE' ? '1 day before' : 'on the day of'} ${companyName} (${ticker}) earnings on ${earningsDate}.` },
+              Text: { Data: `Dear Investor,\n\nThis email confirms your subscription to receive earnings notifications for ${companyName} (${ticker}).\n\nYou will receive a reminder email ${notifyWhen === 'DAY_BEFORE' ? 'one day before' : 'on the day of'} the earnings release scheduled for ${earningsDate}.\n\nThank you for using Earnings Tracker.\n\nSincerely,\nThe Earnings Tracker Team` },
+              Html: {
+                Data: `
+                <div style="font-family: sans-serif; line-height: 1.5; color: #333; text-align: left;">
+                  <h2>Earnings Notification Confirmed</h2>
+                  <p>Dear Investor,</p>
+                  <p>This email confirms your subscription to receive earnings notifications for <strong>${companyName} (${ticker})</strong>.</p>
+                  <p>You will receive a reminder email <strong>${notifyWhen === 'DAY_BEFORE' ? 'one day before' : 'on the day of'}</strong> the earnings release scheduled for <strong>${earningsDate}</strong>.</p>
+                  <p>Thank you for using Earnings Tracker.</p>
+                  <p>Sincerely,<br/>The Earnings Tracker Team</p>
+                  <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                  <p style="font-size: 0.8em; color: #888;">You are receiving this email because you subscribed to earnings alerts on Earnings Tracker. If you did not initiate this subscription, please disregard this email.</p>
+                </div>
+              ` },
             },
           },
         };
