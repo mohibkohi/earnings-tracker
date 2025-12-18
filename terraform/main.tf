@@ -22,6 +22,10 @@ variable "source_email" {
   default     = "mohibkohi@gmail.com" # Placeholder, user needs to verify or override
 }
 
+resource "aws_ses_email_identity" "source" {
+  email = var.source_email
+}
+
 # --- Existing S3 Bucket ---
 resource "aws_s3_bucket" "website" {
   bucket = var.bucket_name
