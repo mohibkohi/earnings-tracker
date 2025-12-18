@@ -131,16 +131,22 @@ export interface SubscriptionRequest {
     notifyWhen: 'DAY_BEFORE' | 'DAY_OF';
 }
 
-export const subscribeToEarnings = async (request: SubscriptionRequest): Promise<boolean> => {
+export const subscribeToEarnings = async (request: SubscriptionRequest, token?: string): Promise<boolean> => {
     const API_ENDPOINT = import.meta.env.VITE_SUBSCRIBE_API_URL || 'https://m93v61t8oh.execute-api.us-east-1.amazonaws.com';
     console.log('Using API endpoint:', API_ENDPOINT);
 
     try {
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+        };
+
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
         const response = await fetch(`${API_ENDPOINT}/subscribe`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers,
             body: JSON.stringify(request)
         });
 

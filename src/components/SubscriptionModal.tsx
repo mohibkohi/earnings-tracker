@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styles from './SubscriptionModal.module.css';
 import { subscribeToEarnings } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 
 interface SubscriptionModalProps {
     isOpen: boolean;
@@ -14,25 +16,30 @@ export function SubscriptionModal({ isOpen, onClose, ticker, companyName, nextEa
     const [email, setEmail] = useState('');
     const [notifyWhen, setNotifyWhen] = useState<'DAY_BEFORE' | 'DAY_OF'>('DAY_BEFORE');
     const [status, setStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+    const { token, isAuthenticated } = useAuth();
+    const navigate = useNavigate();
 
     if (!isOpen) return null;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // If date is unknown, we just send a placeholder or current date + 90 days.
-        // For MVP, if we don't know the date, we can't really schedule accurately, but we simulate success.
-        // The user specifically requested to remove the manual input, so we must autofill or ignore.
+        if (!isAuthenticated) {
+            onClose();
+            navigate('/login', { state: { message: 'Please log in to subscribe to notifications.' } });
+            return;
+        }
+
         const estimatedDate = nextEarningsDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
         setStatus('LOADING');
         const success = await subscribeToEarnings({
-            email,
+            email: '', // Not used anymore if token is passed
             ticker,
             companyName,
             earningsDate: estimatedDate,
             notifyWhen
-        });
+        }, token || undefined);
 
         if (success) {
             setStatus('SUCCESS');

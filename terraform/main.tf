@@ -62,7 +62,7 @@ resource "aws_s3_bucket_policy" "website" {
   depends_on = [aws_s3_bucket_public_access_block.website]
 }
 
-# --- DynamoDB Table ---
+# --- DynamoDB Table: Subscriptions ---
 resource "aws_dynamodb_table" "subscriptions" {
   name           = "EarningsSubscriptions"
   billing_mode   = "PAY_PER_REQUEST"
@@ -76,6 +76,18 @@ resource "aws_dynamodb_table" "subscriptions" {
 
   attribute {
     name = "ticker"
+    type = "S"
+  }
+}
+
+# --- DynamoDB Table: Users ---
+resource "aws_dynamodb_table" "users" {
+  name           = "EarningsUsers"
+  billing_mode   = "PAY_PER_REQUEST"
+  hash_key       = "email"
+
+  attribute {
+    name = "email"
     type = "S"
   }
 }
@@ -115,7 +127,10 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "dynamodb:Scan",
           "dynamodb:Query"
         ]
-        Resource = aws_dynamodb_table.subscriptions.arn
+        Resource = [
+          aws_dynamodb_table.subscriptions.arn,
+          aws_dynamodb_table.users.arn
+        ]
       },
       {
         Effect = "Allow"
@@ -155,6 +170,96 @@ resource "aws_lambda_function" "subscribe" {
 
   environment {
     variables = {
+      TABLE_NAME   = aws_dynamodb_table.subscriptions.name
+      SOURCE_EMAIL = var.source_email
+    }
+  }
+}
+
+# --- Lambda: Signup ---
+data "archive_file" "signup_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/signup"
+  output_path = "${path.module}/dist/signup.zip"
+}
+
+resource "aws_lambda_function" "signup" {
+  filename         = data.archive_file.signup_zip.output_path
+  function_name    = "EarningsSignup"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.signup_zip.output_base64sha256
+
+  environment {
+    variables = {
+      USERS_TABLE  = aws_dynamodb_table.users.name
+      SOURCE_EMAIL = var.source_email
+    }
+  }
+}
+
+# --- Lambda: Login ---
+data "archive_file" "login_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/login"
+  output_path = "${path.module}/dist/login.zip"
+}
+
+resource "aws_lambda_function" "login" {
+  filename         = data.archive_file.login_zip.output_path
+  function_name    = "EarningsLogin"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.login_zip.output_base64sha256
+
+  environment {
+    variables = {
+      USERS_TABLE = aws_dynamodb_table.users.name
+    }
+  }
+}
+
+# --- Lambda: Get Subscriptions ---
+data "archive_file" "get_subs_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/getSubscriptions"
+  output_path = "${path.module}/dist/getSubscriptions.zip"
+}
+
+resource "aws_lambda_function" "get_subs" {
+  filename         = data.archive_file.get_subs_zip.output_path
+  function_name    = "EarningsGetSubscriptions"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.get_subs_zip.output_base64sha256
+
+  environment {
+    variables = {
+      TABLE_NAME = aws_dynamodb_table.subscriptions.name
+    }
+  }
+}
+
+# --- Lambda: Unsubscribe ---
+data "archive_file" "unsubscribe_zip" {
+  type        = "zip"
+  source_dir  = "${path.module}/src/lambdas/unsubscribe"
+  output_path = "${path.module}/dist/unsubscribe.zip"
+}
+
+resource "aws_lambda_function" "unsubscribe" {
+  filename         = data.archive_file.unsubscribe_zip.output_path
+  function_name    = "EarningsUnsubscribe"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "index.handler"
+  runtime          = "nodejs18.x"
+  source_code_hash = data.archive_file.unsubscribe_zip.output_base64sha256
+
+  environment {
+    variables = {
       TABLE_NAME = aws_dynamodb_table.subscriptions.name
     }
   }
@@ -190,8 +295,8 @@ resource "aws_apigatewayv2_api" "earnings_api" {
   protocol_type = "HTTP"
   cors_configuration {
     allow_origins = ["*"]
-    allow_methods = ["POST", "OPTIONS"]
-    allow_headers = ["content-type"]
+    allow_methods = ["POST", "GET", "DELETE", "OPTIONS"]
+    allow_headers = ["content-type", "authorization"]
   }
 }
 
@@ -201,6 +306,9 @@ resource "aws_apigatewayv2_stage" "prod" {
   auto_deploy = true
 }
 
+# --- integrations & Routes ---
+
+# Subscribe
 resource "aws_apigatewayv2_integration" "subscribe_integration" {
   api_id           = aws_apigatewayv2_api.earnings_api.id
   integration_type = "AWS_PROXY"
@@ -213,13 +321,98 @@ resource "aws_apigatewayv2_route" "subscribe_route" {
   target    = "integrations/${aws_apigatewayv2_integration.subscribe_integration.id}"
 }
 
-# Permission for API Gateway to invoke Lambda
-resource "aws_lambda_permission" "api_gateway" {
-  statement_id  = "AllowExecutionFromAPIGateway"
+# Signup
+resource "aws_apigatewayv2_integration" "signup_integration" {
+  api_id           = aws_apigatewayv2_api.earnings_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.signup.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "signup_route" {
+  api_id    = aws_apigatewayv2_api.earnings_api.id
+  route_key = "POST /signup"
+  target    = "integrations/${aws_apigatewayv2_integration.signup_integration.id}"
+}
+
+# Login
+resource "aws_apigatewayv2_integration" "login_integration" {
+  api_id           = aws_apigatewayv2_api.earnings_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.login.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "login_route" {
+  api_id    = aws_apigatewayv2_api.earnings_api.id
+  route_key = "POST /login"
+  target    = "integrations/${aws_apigatewayv2_integration.login_integration.id}"
+}
+
+# Get Subscriptions
+resource "aws_apigatewayv2_integration" "get_subs_integration" {
+  api_id           = aws_apigatewayv2_api.earnings_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.get_subs.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "get_subs_route" {
+  api_id    = aws_apigatewayv2_api.earnings_api.id
+  route_key = "GET /subscriptions"
+  target    = "integrations/${aws_apigatewayv2_integration.get_subs_integration.id}"
+}
+
+# Unsubscribe
+resource "aws_apigatewayv2_integration" "unsubscribe_integration" {
+  api_id           = aws_apigatewayv2_api.earnings_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.unsubscribe.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "unsubscribe_route" {
+  api_id    = aws_apigatewayv2_api.earnings_api.id
+  route_key = "POST /unsubscribe"
+  target    = "integrations/${aws_apigatewayv2_integration.unsubscribe_integration.id}"
+}
+
+# --- Permissions ---
+
+resource "aws_lambda_permission" "api_gateway_subscribe" {
+  statement_id  = "AllowExecutionFromAPIGatewaySubscribe"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.subscribe.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/subscribe"
+}
+
+resource "aws_lambda_permission" "api_gateway_signup" {
+  statement_id  = "AllowExecutionFromAPIGatewaySignup"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.signup.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/signup"
+}
+
+resource "aws_lambda_permission" "api_gateway_login" {
+  statement_id  = "AllowExecutionFromAPIGatewayLogin"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.login.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/login"
+}
+
+resource "aws_lambda_permission" "api_gateway_get_subs" {
+  statement_id  = "AllowExecutionFromAPIGatewayGetSubs"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.get_subs.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/subscriptions"
+}
+
+resource "aws_lambda_permission" "api_gateway_unsubscribe" {
+  statement_id  = "AllowExecutionFromAPIGatewayUnsubscribe"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.unsubscribe.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.earnings_api.execution_arn}/*/*/unsubscribe"
 }
 
 # --- EventBridge Scheduler (Daily) ---
