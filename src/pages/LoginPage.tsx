@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { subscribeToEarnings } from '../api/client';
 import styles from './Auth.module.css';
 
 export default function LoginPage() {
@@ -34,6 +35,28 @@ export default function LoginPage() {
             }
 
             login(data.token, data.user);
+
+            // Check for pending subscription
+            const pendingSubStr = localStorage.getItem('pending_subscription');
+            if (pendingSubStr) {
+                try {
+                    const pendingSub = JSON.parse(pendingSubStr);
+                    const estimatedDate = pendingSub.nextEarningsDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+                    await subscribeToEarnings({
+                        email: '',
+                        ticker: pendingSub.ticker,
+                        companyName: pendingSub.companyName,
+                        earningsDate: estimatedDate,
+                        notifyWhen: pendingSub.notifyWhen
+                    }, data.token);
+
+                    localStorage.removeItem('pending_subscription');
+                } catch (err) {
+                    console.error('Failed to process pending subscription:', err);
+                }
+            }
+
             navigate('/dashboard');
         } catch (err: any) {
             setError(err.message);

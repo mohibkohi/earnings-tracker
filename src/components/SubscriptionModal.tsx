@@ -25,6 +25,15 @@ export function SubscriptionModal({ isOpen, onClose, ticker, companyName, nextEa
         e.preventDefault();
 
         if (!isAuthenticated) {
+            // Save intent to subscribe after login
+            const pendingSub = {
+                ticker,
+                companyName,
+                nextEarningsDate,
+                notifyWhen
+            };
+            localStorage.setItem('pending_subscription', JSON.stringify(pendingSub));
+
             onClose();
             navigate('/login', { state: { message: 'Please log in to subscribe to notifications.' } });
             return;
