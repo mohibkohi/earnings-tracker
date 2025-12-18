@@ -22,6 +22,7 @@ export function Navigation() {
                 <div className="nav-links">
                     {isAuthenticated ? (
                         <>
+                            <Link to="/" className="nav-link">Home</Link>
                             <Link to="/dashboard" className="nav-link">Dashboard</Link>
                             <button onClick={handleLogout} className="logout-btn">Logout</button>
                         </>
