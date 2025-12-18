@@ -84,3 +84,29 @@
     font-size: 1.2rem;
     color: #666;
 }
+
+@media (max-width: 640px) {
+    .container {
+        margin: 20px auto;
+        padding: 0 16px;
+    }
+
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .title {
+        font-size: 1.75rem;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card {
+        padding: 20px;
+    }
+}

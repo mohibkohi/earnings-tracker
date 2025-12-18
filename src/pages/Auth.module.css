@@ -95,3 +95,16 @@
 .link:hover {
     text-decoration: underline;
 }
+
+@media (max-width: 640px) {
+    .container {
+        margin: 40px 16px;
+        padding: 24px;
+        box-sizing: border-box;
+        width: calc(100% - 32px);
+    }
+
+    .title {
+        font-size: 1.5rem;
+    }
+}

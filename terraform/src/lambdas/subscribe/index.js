@@ -1,4 +1,4 @@
-const { DynamoDBClient, PutItemCommand } = require("@aws-sdk/client-dynamodb");
+const { DynamoDBClient, PutItemCommand, GetItemCommand } = require("@aws-sdk/client-dynamodb");
 const { SESClient, SendEmailCommand } = require("@aws-sdk/client-ses");
 const { marshall } = require("@aws-sdk/util-dynamodb");
 const crypto = require("crypto");
@@ -71,6 +71,24 @@ exports.handler = async (event) => {
         statusCode: 400,
         headers: { "Access-Control-Allow-Origin": "*" },
         body: JSON.stringify({ message: "Missing required fields (email/token, ticker, etc)" }),
+      };
+    }
+
+    // Check if subscription already exists
+    const checkParams = {
+      TableName: TABLE_NAME,
+      Key: marshall({
+        email,
+        ticker
+      }),
+    };
+
+    const { Item } = await client.send(new GetItemCommand(checkParams));
+    if (Item) {
+      return {
+        statusCode: 200,
+        headers: { "Access-Control-Allow-Origin": "*" },
+        body: JSON.stringify({ message: "You are already subscribed to this ticker" }),
       };
     }
 
