@@ -13,7 +13,6 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ isOpen, onClose, ticker, companyName, nextEarningsDate }: SubscriptionModalProps) {
-    const [email, setEmail] = useState('');
     const [notifyWhen, setNotifyWhen] = useState<'DAY_BEFORE' | 'DAY_OF'>('DAY_BEFORE');
     const [status, setStatus] = useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
     const { token, isAuthenticated } = useAuth();
@@ -55,7 +54,6 @@ export function SubscriptionModal({ isOpen, onClose, ticker, companyName, nextEa
             setTimeout(() => {
                 onClose();
                 setStatus('IDLE');
-                setEmail('');
             }, 2000);
         } else {
             setStatus('ERROR');
@@ -77,17 +75,6 @@ export function SubscriptionModal({ isOpen, onClose, ticker, companyName, nextEa
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit} className={styles.form}>
-                        <div className={styles.field}>
-                            <label>Email Address</label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={e => setEmail(e.target.value)}
-                                required
-                                placeholder="you@example.com"
-                                className={styles.input}
-                            />
-                        </div>
 
                         <div className={styles.field}>
                             <label>Notify me</label>
