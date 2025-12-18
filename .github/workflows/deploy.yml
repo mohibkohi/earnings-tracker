@@ -29,6 +29,7 @@ jobs:
         run: npm run build
         env:
             VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+            VITE_SUBSCRIBE_API_URL: "https://m93v61t8oh.execute-api.us-east-1.amazonaws.com"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

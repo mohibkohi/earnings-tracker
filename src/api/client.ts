@@ -132,8 +132,8 @@ export interface SubscriptionRequest {
 }
 
 export const subscribeToEarnings = async (request: SubscriptionRequest): Promise<boolean> => {
-    // Ideally this comes from env var, but for now we put a placeholder or expect the user to set it
-    const API_ENDPOINT = import.meta.env.VITE_SUBSCRIBE_API_URL || 'https://placeholder-api-id.execute-api.us-east-1.amazonaws.com';
+    const API_ENDPOINT = import.meta.env.VITE_SUBSCRIBE_API_URL || 'https://m93v61t8oh.execute-api.us-east-1.amazonaws.com';
+    console.log('Using API endpoint:', API_ENDPOINT);
 
     try {
         const response = await fetch(`${API_ENDPOINT}/subscribe`, {
@@ -150,6 +150,7 @@ export const subscribeToEarnings = async (request: SubscriptionRequest): Promise
             return false;
         }
 
+        console.log('Subscription successful');
         return true;
     } catch (error) {
         console.error('Subscription error:', error);
