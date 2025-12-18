@@ -94,7 +94,7 @@ exports.handler = async (event) => {
     try {
       if (SOURCE_EMAIL) {
         const emailParams = {
-          Source: SOURCE_EMAIL,
+          Source: `"Earnings Tracker" <${SOURCE_EMAIL}>`,
           Destination: { ToAddresses: [email] },
           ReplyToAddresses: [SOURCE_EMAIL],
           Message: {

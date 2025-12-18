@@ -74,7 +74,7 @@ exports.handler = async (event) => {
         // Send Welcome Email
         try {
             const emailParams = {
-                Source: SOURCE_EMAIL,
+                Source: `"Earnings Tracker" <${SOURCE_EMAIL}>`,
                 Destination: { ToAddresses: [email] },
                 ReplyToAddresses: [SOURCE_EMAIL],
                 Message: {

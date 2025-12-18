@@ -84,7 +84,7 @@ Earnings Tracker Team
   `;
 
     const params = {
-        Source: SOURCE_EMAIL,
+        Source: `"Earnings Tracker" <${SOURCE_EMAIL}>`,
         Destination: {
             ToAddresses: [sub.email],
         },
